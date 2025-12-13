@@ -11,8 +11,9 @@ Human-concepted, human-tested, Codex-generated. Built fresh for this experimentâ
 
 
 ## Requirements
-- OBS built with Qt6 and libobs development files.
+- OBS built with Qt6 and libobs development files (with a `pkg-config` file for `libobs`).
 - Qt6 Core/Gui/Widgets and Qt6 WebEngineWidgets development packages.
+- `pkg-config` available in `PATH` for the build configuration.
 - Wayland session (tested on Hyprland).
 
 ## Build
@@ -33,14 +34,18 @@ Launch OBS with the plugin in path (example):
 `OBS_PLUGINS_PATH=$HOME/.local/lib/obs-plugins:$OBS_PLUGINS_PATH OBS_PLUGINS_DATA_PATH=$HOME/.local/share/obs/obs-plugins:$OBS_PLUGINS_DATA_PATH obs`
 
 Then open one of two Tools actions:
-- **Hypr Browser (Wayland-safe)**: opens a floating Qt WebEngine window; safest on Wayland/Hyprland.
-- **Hypr Browser (Unsafe dock, experimental)**: uses a real `QDockWidget` (original behavior) and may break preview/layout on Wayland; use only if you accept the risk. It forces floating by default; you can try docking it manually.
-- **Hypr Browser (Texture embed, super experimental)**: offscreen-grabs a hidden browser view and blits it into a dock. Very early prototype; interaction is basic, fps is low, and it may be unstable.
+- **Hypr Browser (Wayland-safe window)**: opens a floating Qt WebEngine window; safest on Wayland/Hyprland.
+- **Hypr Browser (Dock; auto Wayland workaround)**: on X11, this is a normal `QDockWidget`; on Wayland/Hyprland it automatically falls back to the texture-based workaround so OBS does not crash when the dock is attached.
+- **Hypr Browser (Force texture dock)**: always uses the texture grab workaround.
 
 Usage tips:
 - Type a URL and press Enter; `https://` is auto-added when missing.
 - Multiple windows/docks are allowed.
 - Default page loads `https://obsproject.com` to avoid a blank view.
+
+## Why OBS crashes when you dock the browser on Hyprland
+
+Qt WebEngine widgets cannot be reparented between windows on Wayland. When OBS docks/undocks, it reparents the embedded `QWebEngineView`. On Hyprland that reparent attempt often destroys the surface, which crashes the OBS process. The plugin now detects Wayland sessions (including Hyprland) and swaps the dock to a texture-grab surrogate instead of the live WebEngine widget. Interaction is proxied through the texture view to keep native docking viable without tripping the compositor.
 
 ### Alternative: symlink into the user plugin tree
 If you prefer not to set env vars, place a symlink where OBS already scans:
